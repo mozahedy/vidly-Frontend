@@ -7,6 +7,7 @@ import { getGenres } from '../../services/fakeGenreService';
 import ListGroup from '../common/listGroup';
 import MoviesTable from '../moviesTable';
 import _ from 'lodash';
+import { NavLink } from 'react-router-dom';
 
 class Movie extends Component {
     state = { 
@@ -20,6 +21,12 @@ class Movie extends Component {
      handleDelete = (movie)=>{
         const movies = this.state.movies.filter(m=> m._id !== movie._id);
         this.setState({movies});
+     }
+
+     handleNew = (movie) => {
+         //const movies = this.state.movies;
+         //this.setState()
+        console.log('from handle nwe');
      }
 
      handlePageChange = page => {
@@ -71,6 +78,7 @@ class Movie extends Component {
                 {/* <Menu genres={genres} onGenreChange={this.handleGenre} /> */}
             </div>
             <div className="col">
+                <NavLink className="btn btn-primary mb-4" to={{pathname:'/movies/new', onNew:'asdf'}} >New Movie</NavLink>
                 <h5>Showing {totalCount} movies</h5>
                 <MoviesTable allMovies={allMovies} onLike={this.handleLike} onDelete={this.handleDelete} onSort={this.handleSort} sortColumn={sortColumn} />
                 <Pagination itemCount={totalCount} pageSize={pageSize} onPageChange={this.handlePageChange} currentPage={currentPage}  />                
