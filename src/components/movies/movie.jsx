@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
-import { getMovies } from '../../services/fakeMovieService';
-
+import { getMovies, deleteMovie } from '../../services/movieService.js';
+import SearchBox from '../SearchBox';
 import Pagination from '../common/pagination';
 import { paginate } from '../../utils/paginate';
-import { getGenres } from '../../services/fakeGenreService';
+import { getGenres } from '../../services/genreService';
 import ListGroup from '../common/listGroup';
 import MoviesTable from '../moviesTable';
 import _ from 'lodash';
@@ -15,12 +15,24 @@ class Movie extends Component {
         pageSize:4,
         currentPage: 1,
         genres: [],
+        searchQuery: '',
+        selectedGenre: null,
         sortColumn: {path: 'title', order: 'asc'}
      }
 
-     handleDelete = (movie)=>{
-        const movies = this.state.movies.filter(m=> m._id !== movie._id);
+     handleDelete = async (movie)=>{
+         const originalMovies = this.state.movies;
+
+        const movies = originalMovies.filter(m=> m._id !== movie._id);
         this.setState({movies});
+
+        try {
+            await deleteMovie(movie._id);
+        } catch (ex) {
+            if(ex.response && ex.response.status === 404)
+                alert('This movie has already been deleted.');
+            this.setState(originalMovies);
+        }
      }
 
      handleNew = (movie) => {
@@ -38,28 +50,45 @@ class Movie extends Component {
         this.setState({ movies });
      }
 
-     componentDidMount(){
-         const genres = [{_id: "", name: 'All Genres'},...getGenres()];
-         this.setState({movies: getMovies(), genres: genres});
+     async componentDidMount(){
+        const { data } = await getGenres();
+        const { data: movies } = await getMovies(); 
+         
+        const genres = [{_id: "", name: 'All Genres'},...data];
+         
+        this.setState({ movies , genres: genres});
      }
      
      handleGenreSelect = genre => {
-        this.setState({selectedGenre: genre, currentPage: 1});
+        this.setState({selectedGenre: genre, currentPage: 1, searchQuery: '' });
      }
 
      handleSort = (sortColumn) => {
          this.setState({sortColumn});
      }
 
+     handleSearch = query => {
+        this.setState({ searchQuery: query, currentPage: 1, selectedGenre: null })
+      }
+
      getPageData = () => {
-        const  { pageSize, currentPage, movies, selectedGenre, sortColumn } = this.state;
-        const filtered = selectedGenre && selectedGenre._id ? movies.filter(m => m.genre._id === selectedGenre._id) : movies;
+        const  { pageSize, currentPage, movies, selectedGenre, sortColumn, searchQuery } = this.state;
+
+        let filtered;
+        if(searchQuery) 
+            filtered = _.filter(movies, m => {
+            return m.title.toLowerCase().startsWith(searchQuery.toLowerCase());
+          }); 
+         else 
+            filtered = selectedGenre && selectedGenre._id ? movies.filter(m => m.genre._id === selectedGenre._id) : movies;
+          
+        
         const sorted = _.orderBy(filtered, [sortColumn.path], [sortColumn.order]);
 
         const allMovies = paginate(sorted, currentPage, pageSize);
 
         
-        return { totalCount: filtered.length, data: allMovies, pageSize, currentPage, sortColumn }
+        return { totalCount: filtered.length, data: allMovies, pageSize, currentPage, sortColumn, searchQuery }
      }
 
     render() { 
@@ -67,7 +96,9 @@ class Movie extends Component {
         
         if(count === 0) return <p>There are no movies</p>
        
-        const { totalCount, data: allMovies, pageSize, currentPage, sortColumn} = this.getPageData(); 
+        const { totalCount, data: allMovies, pageSize, currentPage, sortColumn, searchQuery} = this.getPageData(); 
+        const { user } = this.props;
+
         return ( 
         <div className="row">
             <div className="col-sm-3" >
@@ -78,8 +109,9 @@ class Movie extends Component {
                 {/* <Menu genres={genres} onGenreChange={this.handleGenre} /> */}
             </div>
             <div className="col">
-                <NavLink className="btn btn-primary mb-4" to={{pathname:'/movies/new', onNew:'asdf'}} >New Movie</NavLink>
+                {user && <NavLink className="btn btn-primary mb-4" to='/movies/new' >New Movie</NavLink>}
                 <h5>Showing {totalCount} movies</h5>
+                <SearchBox  value={searchQuery} onChange={this.handleSearch}/>
                 <MoviesTable allMovies={allMovies} onLike={this.handleLike} onDelete={this.handleDelete} onSort={this.handleSort} sortColumn={sortColumn} />
                 <Pagination itemCount={totalCount} pageSize={pageSize} onPageChange={this.handlePageChange} currentPage={currentPage}  />                
             </div>

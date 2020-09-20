@@ -5,7 +5,7 @@ import Select from "./select";
 
 class Form extends Component {
   state = {
-    dat: {},
+    data: {},
     errors: {},
   };
 
@@ -74,7 +74,16 @@ class Form extends Component {
 
   renderSelect(name, label, options) {
     const { data, errors } = this.state;
-    return <Select name={name} value={data[name]} options={options} onChange={this.handleChange} label={label} error={errors[name]} />;
+    return (
+      <Select
+        name={name}
+        value={data[name]}
+        options={options}
+        onChange={this.handleChange}
+        label={label}
+        error={errors[name]}
+      />
+    );
   }
 }
 
